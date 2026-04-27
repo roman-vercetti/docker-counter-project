@@ -3,6 +3,10 @@
 ![Docker](https://img.shields.io/badge/Docker-20.10+-blue)
 ![Python](https://img.shields.io/badge/Python-3.11-green)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue)
+![Kubernetes](https://img.shields.io/badge/Kubernetes-1.27-blue)
+![Helm](https://img.shields.io/badge/Helm-3.14-blue)
+![Prometheus](https://img.shields.io/badge/Prometheus-2.45-red)
+![Grafana](https://img.shields.io/badge/Grafana-9.5-orange)
 ![Redis](https://img.shields.io/badge/Redis-7-red)
 ![Nginx](https://img.shields.io/badge/Nginx-1.25-green)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
@@ -12,10 +16,11 @@ Production-ready многоконтейнерное приложение на Do
 ## 📋 Оглавление
 
 - [Архитектура](#-архитектура)
-- [Технологии](#-технологии)
+- [Технологии](#️-технологии)
 - [Быстрый старт](#-быстрый-старт)
 - [Команды для управления](#-команды-для-управления)
 - [Технические детали](#-технические-детали)
+- [Kubernetes Deployment](#️-kubernetes-deployment-проект-2)
 - [Мониторинг и отладка](#-мониторинг-и-отладка)
 - [Тестирование](#-тестирование)
 - [Устранение проблем](#-устранение-проблем)
@@ -147,11 +152,15 @@ graph TD
 ## ⚙️ Технологии
 
 | Компонент | Технология | Версия | Назначение |
-|-----------|------------|--------|------------|
+|-----------|-----------|--------|------------|
 | **Reverse Proxy** | Nginx | Alpine 1.25 | Балансировка, статика |
 | **Web Framework** | Flask | 3.0 | API + Web UI |
 | **База данных** | PostgreSQL | 15 Alpine | Persistent storage |
 | **Кеш** | Redis | 7 Alpine | Кеширование |
+| **Оркестрация** | Kubernetes (Kind) | 1.27 | Контейнерная оркестрация |
+| **Пакетный менеджер** | Helm | 3.14 | Управление K8s ресурсами |
+| **Мониторинг** | Prometheus + Grafana | 2.45 / 9.5 | Сбор и визуализация метрик |
+| **CI/CD** | GitHub Actions | - | Автоматизация деплоя |
 | **Язык** | Python | 3.11 Slim | Application logic |
 
 ## 🚀 Быстрый старт
@@ -237,6 +246,128 @@ volumes:
   postgres_data:  # Данные БД сохраняются
   redis_data:     # Кеш Redis переживает рестарты
 ```
+
+## ☸️ Kubernetes Deployment (Проект №2)
+
+В дополнение к Docker Compose, приложение развернуто в **Kubernetes кластере** с использованием **Helm**.
+
+### Архитектура в K8s
+
+```mermaid
+graph TB
+    subgraph "Kind Cluster"
+        subgraph "default namespace"
+            Ingress[Ingress: nginx]
+            Service[Service: ClusterIP]
+            App[Deployment: Flask App<br/>2 replicas]
+            Postgres[StatefulSet: PostgreSQL<br/>1 replica + PVC]
+            Redis[StatefulSet: Redis<br/>1 replica + PVC]
+        end
+    end
+
+    User[Пользователь] -->|localhost:8080| Ingress
+    Ingress --> Service
+    Service --> App
+    App --> Postgres
+    App --> Redis
+
+    style User fill:#1976D2,color:#fff
+    style Ingress fill:#F57C00,color:#fff
+    style App fill:#388E3C,color:#fff
+    style Postgres fill:#7B1FA2,color:#fff
+    style Redis fill:#D32F2F,color:#fff
+```
+### Ресурсы Kubernetes
+
+| Ресурс | Тип | Описание |
+|--------|-----|----------|
+| docker-counter-app | Deployment | 2 реплики Flask приложения |
+| docker-counter-app | Service (ClusterIP) | Внутренний доступ к app |
+| docker-counter-postgresql | StatefulSet | PostgreSQL с persistent storage |
+| docker-counter-postgresql | Service | Доступ к БД из кластера |
+| docker-counter-redis | StatefulSet | Redis с persistent storage |
+| docker-counter-redis | Service | Доступ к Redis из кластера |
+| docker-counter-ingress | Ingress | Маршрутизация с localhost |
+| postgres-data | PVC | 1Gi Persistent Volume |
+| redis-data | PVC | 256Mi Persistent Volume |
+
+### Команды для работы с K8s
+```
+# Установка Helm-чарта
+helm install docker-counter ./helm-chart
+
+# Обновление приложения
+helm upgrade docker-counter ./helm-chart
+
+# Удаление релиза
+helm uninstall docker-counter
+
+# Просмотр статуса
+kubectl get pods,svc,ingress,pvc
+
+# Логи приложения
+kubectl logs -f deployment/docker-counter-app
+
+# Вход в под
+kubectl exec -it deployment/docker-counter-app -- /bin/bash
+
+# Проброс порта для доступа (если Ingress не работает)
+kubectl port-forward service/docker-counter-app 8080:5000
+```
+
+### Мониторинг (Prometheus + Grafana)
+
+Для мониторинга кластера установлен kube-prometheus-stack:
+```
+# Доступ к Grafana
+kubectl port-forward -n monitoring service/prometheus-grafana 3000:80
+```
+
+**Доступные дашборды:**
+
+* Kubernetes / Compute Resources / Cluster
+* Kubernetes / Compute Resources / Namespace (Pods)
+* Kubernetes / Networking / Cluster
+* CoreDNS, etcd, и другие
+
+### Структура Helm-чарта
+```
+helm-chart/
+├── Chart.yaml          # Метаданные чарта
+├── values.yaml         # Параметры конфигурации
+└── templates/
+    ├── deployment.yaml # Deployment Flask приложения
+    ├── service.yaml    # Service для app
+    ├── postgres.yaml   # StatefulSet + Service для PostgreSQL
+    ├── redis.yaml      # StatefulSet + Service для Redis
+    └── ingress.yaml    # Ingress для доступа извне
+```
+
+### Параметры values.yaml
+
+| Параметр | Значение по умолчанию | Описание |
+| :--- | :--- | :--- |
+| `replicaCount` | 2 | Количество реплик приложения |
+| `image.repository` | romanvercetti/docker-counter | Docker образ |
+| `image.tag` | latest | Тег образа |
+| `postgresql.storage` | 1Gi | Размер диска для PostgreSQL |
+| `redis.storage` | 256Mi | Размер диска для Redis |
+| `ingress.enabled` | true | Включить Ingress |
+| `resources.limits.cpu` | 500m | Лимит CPU для пода |
+| `resources.limits.memory` | 512Mi | Лимит памяти для пода |
+
+### Сравнение подходов
+
+| Характеристика | Docker Compose | Kubernetes (Kind) |
+| :--- | :--- | :--- |
+| Среда запуска | Один хост | Кластер из 3 нод |
+| Оркестрация | Базовый порядок запуска | Полноценная с self-healing |
+| Масштабирование | `--scale app=3` | `replicaCount: 5` |
+| Persistent Storage | Docker Volumes | PersistentVolume + PVC |
+| Мониторинг | `docker stats` | Prometheus + Grafana |
+| Документация | `docker-compose.yml` | Helm Chart + values |
+| Production готовность | Маленькие проекты | Enterprise-решения |
+
 
 ## 📊 Мониторинг и отладка
 

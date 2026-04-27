@@ -20,3 +20,11 @@ Thumbs.db
 # Project specific
 backup.sql
 *.db
+
+# Kubernetes local files
+*.kubeconfig
+kind-kubeconfig
+
+# Local scripts with secrets
+deploy-secret.sh
+.env.local

@@ -1,0 +1,34 @@
+# Global settings
+replicaCount: 2
+
+image:
+  repository: romanvercetti/docker-counter
+  tag: latest
+  pullPolicy: IfNotPresent
+
+# PostgreSQL settings
+postgresql:
+  image: postgres:15-alpine
+  database: counter
+  user: admin
+  password: secret123
+  storage: 1Gi
+
+# Redis settings
+redis:
+  image: redis:7-alpine
+  storage: 256Mi
+
+# Ingress settings
+ingress:
+  enabled: true
+  host: localhost
+
+# Resource limits
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi

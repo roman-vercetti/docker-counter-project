@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Chart.Name }}-app
+  labels:
+    app: {{ .Chart.Name }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Chart.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Chart.Name }}
+    spec:
+      containers:
+      - name: app
+        image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        ports:
+        - containerPort: 5000
+          name: http
+        env:
+        - name: DB_HOST
+          value: {{ .Chart.Name }}-postgresql
+        - name: DB_NAME
+          value: {{ .Values.postgresql.database }}
+        - name: DB_USER
+          value: {{ .Values.postgresql.user }}
+        - name: DB_PASSWORD
+          value: {{ .Values.postgresql.password }}
+        - name: REDIS_HOST
+          value: {{ .Chart.Name }}-redis
+        - name: REDIS_PORT
+          value: "6379"
+        resources:
+          {{- toYaml .Values.resources | nindent 10 }}
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 5000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 5000
+          initialDelaySeconds: 5
+          periodSeconds: 5

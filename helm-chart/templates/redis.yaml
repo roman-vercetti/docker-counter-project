@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Chart.Name }}-redis
+spec:
+  serviceName: {{ .Chart.Name }}-redis
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Chart.Name }}-redis
+  template:
+    metadata:
+      labels:
+        app: {{ .Chart.Name }}-redis
+    spec:
+      containers:
+      - name: redis
+        image: {{ .Values.redis.image }}
+        ports:
+        - containerPort: 6379
+          name: redis
+        volumeMounts:
+        - name: redis-data
+          mountPath: /data
+  volumeClaimTemplates:
+  - metadata:
+      name: redis-data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: {{ .Values.redis.storage }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Chart.Name }}-redis
+spec:
+  selector:
+    app: {{ .Chart.Name }}-redis
+  ports:
+  - port: 6379
+    targetPort: 6379

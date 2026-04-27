@@ -1,0 +1,9 @@
+apiVersion: v2
+name: docker-counter
+description: Docker Counter App - Flask with PostgreSQL and Redis
+type: application
+version: 0.1.0
+appVersion: 1.0.0
+maintainers:
+  - name: Roman Petukhov
+    email: roman@example.com
