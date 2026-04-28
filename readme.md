@@ -174,7 +174,7 @@ graph TD
 ## Установка и запуск
 
 - 1. Клонировать репозиторий
-git clone https://github.com/YOUR_USERNAME/docker-counter-project.git
+git clone https://github.com/roman-vercetti/docker-counter-project.git
 cd docker-counter-project
 
 - 2. Запустить все сервисы
